@@ -3,7 +3,7 @@ import numpy as np
 
 class BitmapFont:
     def __init__(self, image_path, glyph_width, glyph_height):
-        self.sprite_sheet = pg.image.load(image_path).convert_alpha()
+        self.sprite_sheet = pg.image.load(image_path)
         self.w = glyph_width
         self.h = glyph_height
         
@@ -33,7 +33,7 @@ class BitmapFont:
         return text_surface
 
 class Terminal:
-    def __init__(self, width, height, bitmap_font_path="", bitmap_font_size=(8,8)):
+    def __init__(self, width, height, bitmap_font):
         self.run = True
 
         self.text = np.full((width, height), "\0")
@@ -42,13 +42,16 @@ class Terminal:
 
         self.cursor_pos = np.full((2),0)
         self.cursor_visible = False
+        self.is_scroll = True
+        self.cursor_fgcolor = np.full((3),255)
+        self.cursor_bgcolor = np.full((3),0)
 
         self.events = None
 
-        self.set_font(bitmap_font_path, bitmap_font_size)
+        self.set_font(bitmap_font)
     
-    def set_font(self, bitmap_font_path, bitmap_font_size):
-        self.bitmap_font = BitmapFont(bitmap_font_path, bitmap_font_size[0], bitmap_font_size[1])
+    def set_font(self, bitmap_font):
+        self.bitmap_font = bitmap_font
 
         self.surface = pg.Surface((self.text.shape[0]*self.bitmap_font.w,self.text.shape[1]*self.bitmap_font.h),pg.SRCALPHA)
 
@@ -59,27 +62,46 @@ class Terminal:
                 self.run = False
 
     def draw(self):
-        self.surface.fill((0,0,0,0))
+        self.surface.blit(self.bitmap_font.letters["o"],(0,0))
         for x in range(self.text.shape[0]):
             for y in range(self.text.shape[1]):
                 surf = pg.Surface((self.bitmap_font.w, self.bitmap_font.h),pg.SRCALPHA)
                 surf.fill(pg.Color(self.bgcolor[x][y][:]))
-                surf.blit(self.bitmap_font.render(self.text[x][y],pg.Color(self.fgcolor[x][y][:])),(x*self.bitmap_font.w,y*self.bitmap_font.h))
+                surf.blit(self.bitmap_font.render(self.text[x][y],pg.Color(self.fgcolor[x][y][:])),(0,0))
+                self.surface.blit(surf, (x*self.bitmap_font.w,y*self.bitmap_font.h))
         
     def mainloop(self):
         while self.run:
             self.update()
             self.draw()
+    
+    def scroll(self, num):
+        for i in range(num):
+            self.text[:,:-1] = self.text[:,1:]
+            self.text[:,-1] = "\0"
+
+    def write(self, text):
+        for t in text:
+            self.text[self.cursor_pos[0],self.cursor_pos[1]] = t
+            self.fgcolor[self.cursor_pos[0],self.cursor_pos[1]] = self.cursor_fgcolor
+            self.bgcolor[self.cursor_pos[0],self.cursor_pos[1]] = self.cursor_bgcolor
+
+            self.cursor_pos[0]+=1
+            if t=="\n" or self.cursor_pos[0]>=self.text.shape[0]:
+                self.cursor_pos[0] = 0
+                self.cursor_pos[1] += 1
+                if self.cursor_pos[1]>=self.text.shape[1]:
+                    self.cursor_pos[1] -= 1
+                    if self.is_scroll:
+                        self.scroll(1)
+                    else:
+                        self.cursor_pos[1] = 0
 
 class TerminalWindow(Terminal):
-    def __init__(self, width, height, bitmap_font_path="", bitmap_font_size=(8, 8)):
-        pg.init()
+    def __init__(self, width, height, bitmap_font):
+        super().__init__(width, height, bitmap_font)
 
-        pg.display.set_mode((1, 1), pg.HIDDEN)
-
-        super().__init__(width, height, bitmap_font_path, bitmap_font_size)
-
-        self.set_font(bitmap_font_path, bitmap_font_size)
+        self.set_font(bitmap_font)
         
         self.clock = pg.Clock()
 
@@ -87,10 +109,11 @@ class TerminalWindow(Terminal):
         super().draw()
         self.screen.fill((0,0,0))
         self.screen.blit(self.surface, (0,0))
+        pg.display.flip()
 
-    def set_font(self, bitmap_font_path, bitmap_font_size):
-        super().set_font(bitmap_font_path, bitmap_font_size)
-        self.screen = pg.display.set_mode(self.surface.get_size(), pg.NOFRAME|pg.SCALED)
+    def set_font(self, bitmap_font):
+        super().set_font(bitmap_font)
+        self.screen = pg.display.set_mode(self.surface.get_size())
     
     def update(self):
         self.clock.tick(60)
@@ -101,5 +124,10 @@ class TerminalWindow(Terminal):
         pg.quit()
 
 if __name__=="__main__":
-    root = TerminalWindow(8,8,"bitmap_font.png",(8,8))
+    pg.init()
+
+    root = TerminalWindow(40,25,BitmapFont("bitmap_font.png",8,8))
+
+    root.write("Hello, World!\nПривет, мир!")
+    
     root.mainloop()
