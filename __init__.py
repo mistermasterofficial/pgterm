@@ -37,11 +37,12 @@ class Terminal:
         self.run = True
 
         self.text = np.full((width, height), "\0")
-        self.fgcolor = np.full((width, height, 3), 0)
+        self.fgcolor = np.full((width, height, 3), 255)
         self.bgcolor = np.full((width, height, 3), 0)
 
         self.cursor_pos = np.full((2),0)
-        self.cursor_visible = False
+        self.cursor_visible = True
+        self.cursor_blink_duration = 500
         self.is_scroll = True
         self.cursor_fgcolor = np.full((3),255)
         self.cursor_bgcolor = np.full((3),0)
@@ -65,9 +66,13 @@ class Terminal:
         self.surface.blit(self.bitmap_font.letters["o"],(0,0))
         for x in range(self.text.shape[0]):
             for y in range(self.text.shape[1]):
+                fgcolor = self.fgcolor[x][y][:]
+                bgcolor = self.bgcolor[x][y][:]
+                if self.cursor_pos[0]==x and self.cursor_pos[1]==y and self.cursor_visible and int((pg.time.get_ticks()%self.cursor_blink_duration)/self.cursor_blink_duration*2):
+                    fgcolor, bgcolor = bgcolor, fgcolor
                 surf = pg.Surface((self.bitmap_font.w, self.bitmap_font.h),pg.SRCALPHA)
-                surf.fill(pg.Color(self.bgcolor[x][y][:]))
-                surf.blit(self.bitmap_font.render(self.text[x][y],pg.Color(self.fgcolor[x][y][:])),(0,0))
+                surf.fill(pg.Color(bgcolor))
+                surf.blit(self.bitmap_font.render(self.text[x][y],pg.Color(fgcolor)),(0,0))
                 self.surface.blit(surf, (x*self.bitmap_font.w,y*self.bitmap_font.h))
         
     def mainloop(self):
@@ -113,7 +118,7 @@ class TerminalWindow(Terminal):
 
     def set_font(self, bitmap_font):
         super().set_font(bitmap_font)
-        self.screen = pg.display.set_mode(self.surface.get_size())
+        self.screen = pg.display.set_mode(self.surface.get_size(), pg.SCALED)
     
     def update(self):
         self.clock.tick(60)
