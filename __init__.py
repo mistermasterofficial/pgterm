@@ -121,6 +121,10 @@ class Terminal:
                     self.cursor.y += 4
                 case "\r":
                     self.cursor.x = 0
+                case "\b":
+                    self.cursor.x -= 1
+                case "\f":
+                    self.cursor.y += 1
                 case _:
                     self.text[self.cursor.x,self.cursor.y] = text[t]
                     self.fgcolor[self.cursor.x,self.cursor.y] = self.cursor.fgcolor
@@ -157,15 +161,14 @@ class CharImage:
                 src[i,j] = chr((x+i)+(y+j)*bitmap_width)
         
         return src
-            
 
 class TerminalWindow(Terminal):
-    def __init__(self, width, height, bitmap_font):
+    def __init__(self, width, height, bitmap_font, display_flags=pg.SCALED, fps=60):
+        self.display_flags = display_flags
         super().__init__(width, height, bitmap_font)
-
-        self.set_font(bitmap_font)
         
         self.clock = pg.Clock()
+        self.fps = fps
 
     def draw(self):
         super().draw()
@@ -175,10 +178,14 @@ class TerminalWindow(Terminal):
 
     def set_font(self, bitmap_font):
         super().set_font(bitmap_font)
-        self.screen = pg.display.set_mode(self.surface.get_size(), pg.SCALED)
+        self.set_mode(self.display_flags)
+    
+    def set_mode(self, display_flags):
+        self.screen = pg.display.set_mode(self.surface.get_size(), display_flags)
+        self.display_flags = display_flags
     
     def update(self):
-        self.clock.tick(60)
+        self.clock.tick(self.fps)
         super().update()
 
     def mainloop(self):
@@ -193,6 +200,9 @@ if __name__=="__main__":
     root.writeln("Hello, World!\nПривет, мир!")
     root.write("▓▒░\v\r")
     root.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
+    # for i in range(15):
+    #     root.write(chr(9601+i))
+    # root.writeln()
     root.write("0123456789ABC\tDEF\r")
 
     root.draw_charimage(CharImage.get(0,80,4,4))
