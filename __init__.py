@@ -167,6 +167,7 @@ class TerminalWindow(Terminal):
         self.display_flags = display_flags
         super().__init__(width, height, bitmap_font)
         
+        pg.mouse.set_visible(False)
         self.clock = pg.Clock()
         self.fps = fps
 
@@ -195,7 +196,7 @@ class TerminalWindow(Terminal):
         pg.quit()
 
 if __name__=="__main__":
-    root = TerminalWindow(40,25,BitmapFont("IBM_EGA_8x8.png",8,8))
+    root = TerminalWindow(40,25,BitmapFont("IBM_EGA_8x8.png",8,8),display_flags=pg.SCALED|pg.FULLSCREEN)
 
     root.writeln("Hello, World!\nПривет, мир!")
     root.write("▓▒░\v\r")
