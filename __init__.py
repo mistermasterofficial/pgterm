@@ -55,11 +55,10 @@ class TerminalCursor:
     
     def check(self):
         is_scroll = False
-        self.x = max(0, self.x)
-        self.y = max(0, self.y)
-        if self.x>=self.width:
+        if self.x>=self.width or self.x<0:
             self.y += self.x//self.width
             self.x = self.x % self.width
+        self.y = max(0, self.y)
         if self.y>=self.height:
             self.y = min(self.y+1 - self.height, self.height)
             is_scroll = True
