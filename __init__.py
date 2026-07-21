@@ -85,10 +85,7 @@ class Terminal:
         self.surface = pg.Surface((self.text.shape[0]*self.bitmap_font.w,self.text.shape[1]*self.bitmap_font.h),pg.SRCALPHA)
 
     def update(self):
-        self.events = pg.event.get()
-        for e in self.events:
-            if e.type == pg.QUIT:
-                self.run = False
+        pass
 
     def draw(self):
         self.surface.blit(self.bitmap_font.letters["o"],(0,0))
@@ -187,6 +184,10 @@ class TerminalWindow(Terminal):
     
     def update(self):
         self.clock.tick(self.fps)
+        self.events = pg.event.get()
+        for e in self.events:
+            if e.type == pg.QUIT:
+                self.run = False
         super().update()
 
     def mainloop(self):
