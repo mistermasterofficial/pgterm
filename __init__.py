@@ -227,10 +227,14 @@ class TerminalWindow(Terminal):
     
     def input(self, placeholder="", size=0):
         result = placeholder
+        if size>0:
+            result = result[:min(len(result),size)]
         cursor = len(result)
         max_size = len(result)
         is_visible = deepcopy(self.cursor.visible)
         clock = pg.Clock()
+
+        self.cursor.x += cursor
 
         while True:
             clock.tick(self.fps)
@@ -306,12 +310,12 @@ if __name__=="__main__":
 
     def program(terminal):
         while True:
-            terminal.set_fg_color(pg.Color("blue"))
-            terminal.set_bg_color(pg.Color("white"))
+            terminal.set_fg_color(pg.Color("white"))
+            terminal.set_bg_color(pg.Color("blue"))
             terminal.write(">> ")
             terminal.set_fg_color(pg.Color("white"))
             terminal.set_bg_color(pg.Color("black"))
-            if terminal.input().lower()=="exit":
+            if terminal.input(placeholder="Hello, World!",size=10).lower()=="exit":
                 terminal.run = False
     
     root.script = program
