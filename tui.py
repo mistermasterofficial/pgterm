@@ -33,6 +33,7 @@ class ContainerGroup:
 class Container:
     def __init__(self):
         self.elements = []
+        self.selectable_elements = []
         self.selected_element = None
         self.is_focus = False
     
@@ -47,13 +48,13 @@ class Container:
                 self.is_focus = False
             if e.type==pg.KEYDOWN and e.key==pg.K_TAB and pg.key.get_mods() & (pg.KMOD_LSHIFT|pg.KMOD_RSHIFT) and not self.is_focus and self.selected_element is not None:
                 pg.event.post(pg.Event(UIEvent.UNSELECT, element=self.selected_element))
-                self.selected_element = self.elements[(self.elements.index(self.selected_element)-1)%len(self.selected_element)]
+                self.selected_element = self.selectable_elements[(self.selectable_elements.index(self.selected_element)-1)%len(self.selected_element)]
                 pg.event.post(pg.Event(UIEvent.SELECT, element=self.selected_element))
             if e.type==pg.KEYDOWN and e.key==pg.K_TAB and not self.is_focus:
                 pg.event.post(pg.Event(UIEvent.UNSELECT, element=self.selected_element))
                 if self.selected_element is None:
-                    self.selected_element = self.elements[-1]
-                self.selected_element = self.elements[(self.elements.index(self.selected_element)+1)%len(self.selected_element)]
+                    self.selected_element = self.selectable_elements[-1]
+                self.selected_element = self.selectable_elements[(self.selectable_elements.index(self.selected_element)+1)%len(self.selected_element)]
                 pg.event.post(pg.Event(UIEvent.SELECT, element=self.selected_element))
             if e.type==pg.KEYDOWN and e.key==pg.K_RETURN and not self.is_focus and self.selected_element is None:
                 pg.event.post(pg.Event(UIEvent.ENDUPDATE))
@@ -70,6 +71,14 @@ class Element:
 
         self.root = root
         self.root.elements.append(self)
+    
+    def __del__(self):
+        self.root.elements.remove(self)
+        if self in self.root.selectable_elements:
+            self.root.selectable_elements.remove(self)
+        if self is self.root.selected_element:
+            self.root.selected_element = None
+        pg.event.post(pg.Event(UIEvent.UNFOCUS))
     
     def update(self, terminal):
         source_cursor = deepcopy(terminal.cursor)

@@ -1,5 +1,15 @@
 import pygame as pg
 import numpy as np
+from copy import deepcopy
+from threading import Thread
+
+def thread(fn):
+    def wrapper(*args, **kwargs):
+        thread = Thread(target=fn, args=args, kwargs=kwargs)
+        thread.daemon = True
+        thread.start()
+        return thread
+    return wrapper
 
 pg.init()
 
@@ -75,7 +85,7 @@ class Terminal:
         self.cursor = TerminalCursor(width,height)
         self.is_scroll = True
 
-        self.events = None
+        self.events = []
 
         self.set_font(bitmap_font)
     
@@ -88,7 +98,6 @@ class Terminal:
         pass
 
     def draw(self):
-        self.surface.blit(self.bitmap_font.letters["o"],(0,0))
         for x in range(self.text.shape[0]):
             for y in range(self.text.shape[1]):
                 fgcolor = self.fgcolor[x][y][:]
@@ -189,6 +198,58 @@ class TerminalWindow(Terminal):
             if e.type == pg.QUIT:
                 self.run = False
         super().update()
+    
+    def input(self, placeholder="", size=0):
+        result = placeholder
+        cursor = len(result)
+        max_size = len(result)
+        is_visible = deepcopy(self.cursor.visible)
+        clock = pg.Clock()
+
+        while True:
+            clock.tick(self.fps)
+
+            self.cursor.visible = False
+            self.cursor.x -= cursor
+            self.cursor.check()
+
+            for e in self.events:
+                if e.type==pg.KEYDOWN:
+                    if e.key==pg.K_RETURN:
+                        self.cursor.x += max_size
+                        self.cursor.check()
+                        self.cursor.visible = is_visible
+                        self.writeln()
+                        return result
+                    elif e.key==pg.K_HOME:
+                        cursor = 0
+                    elif e.key==pg.K_END:
+                        cursor = len(result)
+                    elif e.key==pg.K_BACKSPACE:
+                        result = result[:cursor-1]+result[cursor:]
+                        cursor = max(cursor-1, 0)
+                    elif e.key==pg.K_DELETE:
+                        result = result[:cursor]+result[cursor+1:]
+                    elif e.key==pg.K_LEFT:
+                        cursor = max(0, cursor-1)
+                    elif e.key==pg.K_RIGHT:
+                        cursor = min(len(result), cursor+1)
+                    elif len(pg.key.name(e.key))==1 or e.unicode:
+                        new_result = result[:cursor]+e.unicode+result[cursor:]
+                        if (size>0 and len(new_result)<=size) or size<=0:
+                            result = new_result
+                            max_size = max(max_size, len(result))
+                            cursor+=1
+
+            for i in range(max_size):
+                if i<len(result):
+                    self.write(result[i])
+                else:
+                    self.write("\0")
+            self.cursor.x -= max_size
+            self.cursor.x += cursor
+            self.cursor.check()
+            self.cursor.visible = is_visible
 
     def mainloop(self):
         while self.run:
@@ -208,5 +269,15 @@ if __name__=="__main__":
     root.write("0123456789ABC\tDEF\r")
 
     root.draw_charimage(CharImage.get(0,80,4,4))
+
+    root.write("\v")
+
+    @thread
+    def program():
+        while True:
+            root.write(">> ")
+            if root.input().lower()=="exit":
+                root.run = False
     
+    program()
     root.mainloop()
