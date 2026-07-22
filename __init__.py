@@ -251,7 +251,11 @@ class TerminalWindow(Terminal):
             self.cursor.check()
             self.cursor.visible = is_visible
 
+    def script(self):
+        pass
+
     def mainloop(self):
+        thread(self.script)()
         while self.run:
             self.update()
             self.draw()
@@ -272,12 +276,11 @@ if __name__=="__main__":
 
     root.write("\v")
 
-    @thread
     def program():
         while True:
             root.write(">> ")
             if root.input().lower()=="exit":
                 root.run = False
     
-    program()
+    root.script = program
     root.mainloop()
