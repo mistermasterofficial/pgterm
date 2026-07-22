@@ -299,9 +299,6 @@ if __name__=="__main__":
     root.writeln("Hello, World!\nПривет, мир!")
     root.write("▓▒░\v\r")
     root.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
-    # for i in range(15):
-    #     root.write(chr(9601+i))
-    # root.writeln()
     root.write("0123456789ABC\tDEF\r")
 
     root.draw_charimage(CharImage.get(0,80,4,4))
