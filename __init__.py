@@ -114,6 +114,12 @@ class Terminal:
             self.text[:,:-1] = self.text[:,1:]
             self.text[:,-1] = "\0"
 
+            self.fgcolor[:,:-1] = self.fgcolor[:,1:]
+            self.fgcolor[:,-1] = self.cursor.fgcolor
+
+            self.bgcolor[:,:-1] = self.bgcolor[:,1:]
+            self.bgcolor[:,-1] = self.cursor.bgcolor
+
     def write(self, *text):
         text = "".join(list(text))
         for t in range(len(text)):
@@ -156,6 +162,26 @@ class Terminal:
                 self.writeln()
             self.cursor.x = x
         self.cursor.y -= charimage.shape[1]-1
+
+    def set_fg_color(self, color):
+        if type(color) is tuple or type(color) is list:
+            self.cursor.fgcolor[0] = color[0]
+            self.cursor.fgcolor[1] = color[1]
+            self.cursor.fgcolor[2] = color[2]
+        elif type(color) is pg.Color:
+            self.cursor.fgcolor[0] = color.r
+            self.cursor.fgcolor[1] = color.g
+            self.cursor.fgcolor[2] = color.b
+
+    def set_bg_color(self, color):
+        if type(color) is tuple or type(color) is list:
+            self.cursor.bgcolor[0] = color[0]
+            self.cursor.bgcolor[1] = color[1]
+            self.cursor.bgcolor[2] = color[2]
+        elif type(color) is pg.Color:
+            self.cursor.bgcolor[0] = color.r
+            self.cursor.bgcolor[1] = color.g
+            self.cursor.bgcolor[2] = color.b
 
 class CharImage:
     @staticmethod
@@ -213,7 +239,9 @@ class TerminalWindow(Terminal):
             self.cursor.x -= cursor
             self.cursor.check()
 
-            for e in self.events:
+            events = self.events
+
+            for e in events:
                 if e.type==pg.KEYDOWN:
                     if e.key==pg.K_RETURN:
                         self.cursor.x += max_size
@@ -255,7 +283,7 @@ class TerminalWindow(Terminal):
         pass
 
     def mainloop(self):
-        thread(self.script)()
+        thread(self.script)(self)
         while self.run:
             self.update()
             self.draw()
@@ -276,11 +304,15 @@ if __name__=="__main__":
 
     root.write("\v")
 
-    def program():
+    def program(terminal):
         while True:
-            root.write(">> ")
-            if root.input().lower()=="exit":
-                root.run = False
+            terminal.set_fg_color(pg.Color("blue"))
+            terminal.set_bg_color(pg.Color("white"))
+            terminal.write(">> ")
+            terminal.set_fg_color(pg.Color("white"))
+            terminal.set_bg_color(pg.Color("black"))
+            if terminal.input().lower()=="exit":
+                terminal.run = False
     
     root.script = program
     root.mainloop()
