@@ -2,6 +2,7 @@ import pygame as pg
 import numpy as np
 from copy import deepcopy
 from threading import Thread
+from queue import Queue
 
 def thread(fn):
     def wrapper(*args, **kwargs):
@@ -200,6 +201,7 @@ class TerminalWindow(Terminal):
         super().__init__(width, height, bitmap_font)
         
         pg.mouse.set_visible(False)
+        self.events_queue = Queue(maxsize=1)
         self.clock = pg.Clock()
         self.fps = fps
 
@@ -220,16 +222,22 @@ class TerminalWindow(Terminal):
     def update(self):
         self.clock.tick(self.fps)
         self.events = pg.event.get()
+        self.events_queue.put(self.events)
         for e in self.events:
             if e.type == pg.QUIT:
                 self.run = False
         super().update()
+
+    def get_events(self):
+        return self.events_queue.get()
     
-    def input(self, placeholder="", size=0):
+    def input(self, placeholder="", size=0, password_char=""):
         result = placeholder
+        old_result = deepcopy(result)
         if size>0:
             result = result[:min(len(result),size)]
         cursor = len(result)
+        old_cursor = deepcopy(cursor)
         max_size = len(result)
         is_visible = deepcopy(self.cursor.visible)
         clock = pg.Clock()
@@ -239,11 +247,7 @@ class TerminalWindow(Terminal):
         while True:
             clock.tick(self.fps)
 
-            self.cursor.visible = False
-            self.cursor.x -= cursor
-            self.cursor.check()
-
-            events = self.events
+            events = self.get_events()
 
             for e in events:
                 if e.type==pg.KEYDOWN:
@@ -273,15 +277,24 @@ class TerminalWindow(Terminal):
                             max_size = max(max_size, len(result))
                             cursor+=1
 
-            for i in range(max_size):
-                if i<len(result):
-                    self.write(result[i])
-                else:
-                    self.write("\0")
-            self.cursor.x -= max_size
-            self.cursor.x += cursor
-            self.cursor.check()
-            self.cursor.visible = is_visible
+            if password_char!="\0" and (result!=old_result or cursor!=old_cursor):
+                self.cursor.visible = False
+                self.cursor.x -= old_cursor
+                self.cursor.check()
+                for i in range(max_size):
+                    if i<len(result):
+                        if password_char!="":
+                            self.write(password_char)
+                        else:
+                            self.write(result[i])
+                    else:
+                        self.write("\0")
+                self.cursor.x -= max_size
+                self.cursor.x += cursor
+                self.cursor.check()
+                self.cursor.visible = is_visible
+                old_cursor = deepcopy(cursor)
+                old_result = deepcopy(result)
 
     def script(self):
         pass
@@ -312,7 +325,7 @@ if __name__=="__main__":
             terminal.write(">> ")
             terminal.set_fg_color(pg.Color("white"))
             terminal.set_bg_color(pg.Color("black"))
-            if terminal.input(placeholder="Hello, World!",size=10).lower()=="exit":
+            if terminal.input().lower()=="exit":
                 terminal.run = False
     
     root.script = program
