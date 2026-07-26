@@ -121,10 +121,31 @@ class Terminal:
             self.bgcolor[:,:-1] = self.bgcolor[:,1:]
             self.bgcolor[:,-1] = self.cursor.bgcolor
 
+    def cursor_scroll(self):
+        if self.cursor.check():
+            if self.is_scroll:
+                self.scroll(self.cursor.y)
+                self.cursor.to_bottom()
+            else:
+                self.cursor.y -= 1
+
     def write(self, *text):
         text = "".join(list(text))
+        shift = 0
         for t in range(len(text)):
-            match text[t]:
+            if t+shift>=len(text): break
+
+            if text[t+shift:t+shift+2]=="\x1b[":
+                code = ""
+                shift += 2
+                while not text[t+shift].isalpha():
+                    code += text[t+shift]
+                    shift += 1
+                code += text[t+shift]
+                self.ansi_esc_handler(code)
+                continue
+
+            match text[t+shift]:
                 case "\n":
                     self.cursor.x = 0
                     self.cursor.y += 1
@@ -139,17 +160,12 @@ class Terminal:
                 case "\f":
                     self.cursor.y += 1
                 case _:
-                    self.text[self.cursor.x,self.cursor.y] = text[t]
+                    self.text[self.cursor.x,self.cursor.y] = text[t+shift]
                     self.fgcolor[self.cursor.x,self.cursor.y] = self.cursor.fgcolor
                     self.bgcolor[self.cursor.x,self.cursor.y] = self.cursor.bgcolor
                     self.cursor.x+=1
             
-            if self.cursor.check():
-                if self.is_scroll:
-                    self.scroll(self.cursor.y)
-                    self.cursor.to_bottom()
-                else:
-                    self.cursor.y -= 1
+            self.cursor_scroll()
     
     def writeln(self, *text):
         self.write(*text,"\n")
@@ -184,9 +200,72 @@ class Terminal:
             self.cursor.bgcolor[1] = color.g
             self.cursor.bgcolor[2] = color.b
 
+    def ansi_esc_handler(self, code):
+        args = code[:-1].split(";")
+        mode = code[-1].lower()
+        if hasattr(self, "ansi_esc_"+mode):
+            getattr(self, "ansi_esc_"+mode)(args)
+
+    def ansi_esc_h(self, args):
+        if len(args)<=1:
+            self.cursor.x = 0
+            self.cursor.y = 0
+        elif len(args)==2:
+            self.ansi_esc_f(args)
+
+    def ansi_esc_f(self, args):
+        self.cursor.x = int(args[0])
+        self.cursor.y = int(args[1])
+        self.cursor_scroll()
+
+    def ansi_esc_a(self, args):
+        self.cursor.y -= int(args[0])
+        self.cursor_scroll()
+
+    def ansi_esc_b(self, args):
+        self.cursor.y += int(args[0])
+        self.cursor_scroll()
+
+    def ansi_esc_c(self, args):
+        self.cursor.x += int(args[0])
+        self.cursor_scroll()
+
+    def ansi_esc_d(self, args):
+        self.cursor.x -= int(args[0])
+        self.cursor_scroll()
+
+    def ansi_esc_m(self, args):
+        colors = [
+            "black",
+            "red",
+            "green",
+            "yellow",
+            "blue",
+            "magenta",
+            "cyan",
+            "white",
+            "",
+            "default"
+        ]
+
+        for a in args:
+            if a=="0":
+                self.set_fg_color(pg.Color("white"))
+                self.set_bg_color(pg.Color("black"))
+                
+            if len(a)==2:
+                func = "set_"
+                if a[0]=="3":
+                    func += "fg_color"
+                if a[0]=="4":
+                    func += "bg_color"
+
+                if hasattr(self, func):
+                    getattr(self, func)(pg.Color(colors[int(a[1])]))
+
 class CharImage:
     @staticmethod
-    def get(x, y, width, height, bitmap_width=16):
+    def get_bitmap_image(x, y, width, height, bitmap_width=16):
         src = np.full((width, height),"\0")
 
         for i in range(width):
@@ -194,6 +273,15 @@ class CharImage:
                 src[i,j] = chr((x+i)+(y+j)*bitmap_width)
         
         return src
+
+    @staticmethod
+    def get_ansi_art_image(filename, scaleY=2):
+        with open(filename,"r") as f:
+            data = f.readlines()
+        result = ""
+        for d in data:
+            result += d*scaleY
+        return result
 
 class TerminalWindow(Terminal):
     def __init__(self, width, height, bitmap_font, display_flags=pg.SCALED, fps=60):
@@ -308,16 +396,18 @@ class TerminalWindow(Terminal):
         pg.quit()
 
 if __name__=="__main__":
-    root = TerminalWindow(40,25,BitmapFont("IBM_EGA_8x8.png",8,8),display_flags=pg.SCALED|pg.FULLSCREEN)
+    root = TerminalWindow(50,40,BitmapFont("IBM_EGA_8x8.png",8,8),display_flags=pg.SCALED|pg.FULLSCREEN)
 
     root.writeln("Hello, World!\nПривет, мир!")
-    root.write("▓▒░\v\r")
+    root.write("\x1b[31m▓▒░\v\r")
     root.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
     root.write("0123456789ABC\tDEF\r")
 
-    root.draw_charimage(CharImage.get(0,80,4,4))
+    root.draw_charimage(CharImage.get_bitmap_image(0,80,4,4))
 
-    root.write("\v")
+    root.write("\v\x1b[h")
+
+    root.writeln(CharImage.get_ansi_art_image("ansi_picture.txt"))
 
     def program(terminal):
         while True:
