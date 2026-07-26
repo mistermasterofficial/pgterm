@@ -252,7 +252,8 @@ class TerminalWindow(Terminal):
             for e in events:
                 if e.type==pg.KEYDOWN:
                     if e.key==pg.K_RETURN:
-                        self.cursor.x += max_size
+                        self.cursor.visible = False
+                        self.cursor.x -= old_cursor
                         self.cursor.check()
                         self.cursor.visible = is_visible
                         self.writeln()
