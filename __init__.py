@@ -169,16 +169,6 @@ class Terminal:
     
     def writeln(self, *text):
         self.write(*text,"\n")
-    
-    def draw_charimage(self, charimage):
-        x = self.cursor.x*1
-        for i in range(charimage.shape[1]):
-            for j in range(charimage.shape[0]):
-                self.write(charimage[j, i])
-            if i<charimage.shape[1]-1:
-                self.writeln()
-            self.cursor.x = x
-        self.cursor.y -= charimage.shape[1]-1
 
     def set_fg_color(self, color):
         if type(color) is tuple or type(color) is list:
@@ -235,42 +225,63 @@ class Terminal:
         self.cursor_scroll()
 
     def ansi_esc_m(self, args):
-        colors = [
-            "black",
-            "red",
-            "green",
-            "yellow",
-            "blue",
-            "magenta",
-            "cyan",
-            "white",
-            "",
-            "default"
-        ]
-
         for a in args:
+            colors = [
+                "black",
+                "darkred",
+                "darkgreen",
+                "darkyellow",
+                "darkblue",
+                "darkmagenta",
+                "darkcyan",
+                "gray",
+                "",
+                "default"
+            ]
+            
             if a=="0":
                 self.set_fg_color(pg.Color("white"))
                 self.set_bg_color(pg.Color("black"))
-                
-            if len(a)==2:
-                func = "set_"
-                if a[0]=="3":
-                    func += "fg_color"
-                if a[0]=="4":
-                    func += "bg_color"
+                continue
 
-                if hasattr(self, func):
-                    getattr(self, func)(pg.Color(colors[int(a[1])]))
+            if a[:-1]=="9" or a[:-1]=="10":
+                colors = [
+                    "darkgray",
+                    "red",
+                    "green",
+                    "yellow",
+                    "blue",
+                    "magenta",
+                    "cyan",
+                    "white",
+                    "",
+                    "default"
+                ]
+
+            func = "set_"
+            if a[:-1]=="3" or a[:-1]=="9":
+                func += "fg_color"
+                colors[-1] = "white"
+            if a[:-1]=="4" or a[:-1]=="10":
+                func += "bg_color"
+                colors[-1] = "black"
+
+            if hasattr(self, func):
+                getattr(self, func)(pg.Color(colors[int(a[-1])]))
 
 class CharImage:
     @staticmethod
     def get_bitmap_image(x, y, width, height, bitmap_width=16):
-        src = np.full((width, height),"\0")
+        src = ""
 
-        for i in range(width):
-            for j in range(height):
-                src[i,j] = chr((x+i)+(y+j)*bitmap_width)
+        for i in range(height):
+            for j in range(width):
+                src += chr((x+j)+(y+i)*bitmap_width)
+            src += f"\x1b[{width}d"
+            if i<width-1:
+                src += "\x1b[1b"
+            else:
+                src += f"\x1b[{height-1}a"
         
         return src
 
@@ -284,17 +295,26 @@ class CharImage:
         return result
 
 class TerminalWindow(Terminal):
-    def __init__(self, width, height, bitmap_font, display_flags=pg.SCALED, fps=60):
+    def __init__(self, width, height, bitmap_font, display_flags=pg.SCALED, fps=60, events_queue_size=1):
         self.display_flags = display_flags
         super().__init__(width, height, bitmap_font)
         
         pg.mouse.set_visible(False)
-        self.events_queue = Queue(maxsize=1)
+        self.events_queue = Queue(maxsize=events_queue_size)
         self.clock = pg.Clock()
         self.fps = fps
 
+        self.is_freeze = False
+
+    def freeze(self):
+        self.is_freeze = True
+
+    def unfreeze(self):
+        self.is_freeze = False
+
     def draw(self):
-        super().draw()
+        if not self.is_freeze:
+            super().draw()
         self.screen.fill((0,0,0))
         self.screen.blit(self.surface, (0,0))
         pg.display.flip()
@@ -318,6 +338,17 @@ class TerminalWindow(Terminal):
 
     def get_events(self):
         return self.events_queue.get()
+
+    def waitkey(self, key=None):
+        clock = pg.Clock()
+
+        while True:
+            clock.tick(self.fps)
+            events = self.get_events()
+
+            for e in events:
+                if e.type==pg.KEYDOWN and (key is None or e.key==key):
+                    return
     
     def input(self, placeholder="", size=0, password_char=""):
         result = placeholder
@@ -342,6 +373,7 @@ class TerminalWindow(Terminal):
                     if e.key==pg.K_RETURN:
                         self.cursor.visible = False
                         self.cursor.x -= old_cursor
+                        self.cursor.x += max_size
                         self.cursor.check()
                         self.cursor.visible = is_visible
                         self.writeln()
@@ -367,6 +399,7 @@ class TerminalWindow(Terminal):
                             cursor+=1
 
             if password_char!="\0" and (result!=old_result or cursor!=old_cursor):
+                self.freeze()
                 self.cursor.visible = False
                 self.cursor.x -= old_cursor
                 self.cursor.check()
@@ -384,6 +417,7 @@ class TerminalWindow(Terminal):
                 self.cursor.visible = is_visible
                 old_cursor = deepcopy(cursor)
                 old_result = deepcopy(result)
+                self.unfreeze()
 
     def script(self):
         pass
@@ -403,7 +437,7 @@ if __name__=="__main__":
     root.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
     root.write("0123456789ABC\tDEF\r")
 
-    root.draw_charimage(CharImage.get_bitmap_image(0,80,4,4))
+    root.write(CharImage.get_bitmap_image(0,80,4,4))
 
     root.write("\v\x1b[h")
 
