@@ -432,18 +432,19 @@ class TerminalWindow(Terminal):
 if __name__=="__main__":
     root = TerminalWindow(50,40,BitmapFont("IBM_EGA_8x8.png",8,8),display_flags=pg.SCALED|pg.FULLSCREEN)
 
-    root.writeln("Hello, World!\nПривет, мир!")
-    root.write("\x1b[31m▓▒░\v\r")
-    root.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
-    root.write("0123456789ABC\tDEF\r")
-
-    root.write(CharImage.get_bitmap_image(0,80,4,4))
-
-    root.write("\v\x1b[h")
-
-    root.writeln(CharImage.get_ansi_art_image("ansi_picture.txt"))
-
     def program(terminal):
+        terminal.writeln("Hello, World!\nПривет, мир!")
+        terminal.write("\x1b[31m▓▒░\v\r")
+        terminal.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
+        terminal.write("0123456789ABC\tDEF\r")
+    
+        terminal.write(CharImage.get_bitmap_image(0,80,4,4))
+    
+        terminal.write("\v\x1b[h")
+        terminal.waitkey()
+    
+        terminal.writeln(CharImage.get_ansi_art_image("ansi_picture.txt"))
+
         while True:
             terminal.set_fg_color(pg.Color("white"))
             terminal.set_bg_color(pg.Color("blue"))
