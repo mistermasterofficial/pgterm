@@ -52,7 +52,7 @@ class Container:
                 pg.event.post(pg.Event(UIEvent.SELECT, element=self.selected_element))
             if e.type==pg.KEYDOWN and e.key==pg.K_TAB and not self.is_focus:
                 pg.event.post(pg.Event(UIEvent.UNSELECT, element=self.selected_element))
-                if self.selected_element is None:
+                if self.selected_element is None and len(self.selectable_elements)>0:
                     self.selected_element = self.selectable_elements[-1]
                 self.selected_element = self.selectable_elements[(self.selectable_elements.index(self.selected_element)+1)%len(self.selected_element)]
                 pg.event.post(pg.Event(UIEvent.SELECT, element=self.selected_element))
