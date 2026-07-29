@@ -230,7 +230,7 @@ class Terminal:
                 "black",
                 "darkred",
                 "darkgreen",
-                "darkyellow",
+                "darkgoldenrod",
                 "darkblue",
                 "darkmagenta",
                 "darkcyan",
@@ -246,7 +246,7 @@ class Terminal:
 
             if a[:-1]=="9" or a[:-1]=="10":
                 colors = [
-                    "darkgray",
+                    "gray50",
                     "red",
                     "green",
                     "yellow",
@@ -286,12 +286,18 @@ class CharImage:
         return src
 
     @staticmethod
-    def get_ansi_art_image(filename, scaleY=2):
+    def get_ansi_art_image(filename, scaleY=2, indent=0, position=None):
         with open(filename,"r") as f:
             data = f.readlines()
         result = ""
+        if position is not None:
+            result += f"\x1b[{position[0]};{position[1]}h"
+            indent = position[0]
         for d in data:
-            result += d*scaleY
+            if indent<=0:
+                result += d*scaleY
+            else:
+                result += (d+f"\x1b[{indent}c")*scaleY
         return result
 
 class TerminalWindow(Terminal):
@@ -441,9 +447,14 @@ if __name__=="__main__":
         terminal.write(CharImage.get_bitmap_image(0,80,4,4))
     
         terminal.write("\v\x1b[h")
+
+        for i in range(8):
+            terminal.write(f"\x1b[3{i}m█")
+        for i in range(8):
+            terminal.write(f"\x1b[9{i}m█")
         terminal.waitkey()
     
-        terminal.writeln(CharImage.get_ansi_art_image("ansi_picture.txt"))
+        terminal.writeln(CharImage.get_ansi_art_image("ansi_picture.txt", position=(1,2)))
 
         while True:
             terminal.set_fg_color(pg.Color("white"))
