@@ -46,6 +46,8 @@ class BitmapFont:
                 
         return text_surface
 
+default_font = BitmapFont("\\".join(__file__.split("\\")[:-1])+"\\IBM_EGA_8x8.png",8,8)
+
 class TerminalCursor:
     def __init__(self, width, height):
         self.x, self.y = 0, 0
@@ -429,41 +431,41 @@ class TerminalWindow(Terminal):
         pass
 
     def mainloop(self):
-        thread(self.script)(self)
+        thread(self.script)()
         while self.run:
             self.update()
             self.draw()
         pg.quit()
 
 if __name__=="__main__":
-    root = TerminalWindow(50,40,BitmapFont("IBM_EGA_8x8.png",8,8),display_flags=pg.SCALED|pg.FULLSCREEN)
+    root = TerminalWindow(50,40,default_font,display_flags=pg.SCALED|pg.FULLSCREEN)
 
-    def program(terminal):
-        terminal.writeln("Hello, World!\nПривет, мир!")
-        terminal.write("\x1b[31m▓▒░\v\r")
-        terminal.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
-        terminal.write("0123456789ABC\tDEF\r")
+    def program():
+        root.writeln("Hello, World!\nПривет, мир!")
+        root.write("\x1b[31m▓▒░\v\r")
+        root.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
+        root.write("0123456789ABC\tDEF\r")
     
-        terminal.write(CharImage.get_bitmap_image(0,80,4,4))
+        root.write(CharImage.get_bitmap_image(0,80,4,4))
     
-        terminal.write("\v\x1b[h")
+        root.write("\v\x1b[h")
 
         for i in range(8):
-            terminal.write(f"\x1b[3{i}m█")
+            root.write(f"\x1b[3{i}m█")
         for i in range(8):
-            terminal.write(f"\x1b[9{i}m█")
-        terminal.waitkey()
+            root.write(f"\x1b[9{i}m█")
+        root.waitkey()
     
-        terminal.writeln(CharImage.get_ansi_art_image("ansi_picture.txt", position=(1,2)))
+        root.writeln(CharImage.get_ansi_art_image("ansi_picture.txt", position=(1,2)))
 
         while True:
-            terminal.set_fg_color(pg.Color("white"))
-            terminal.set_bg_color(pg.Color("blue"))
-            terminal.write(">> ")
-            terminal.set_fg_color(pg.Color("white"))
-            terminal.set_bg_color(pg.Color("black"))
-            if terminal.input().lower()=="exit":
-                terminal.run = False
+            root.set_fg_color(pg.Color("white"))
+            root.set_bg_color(pg.Color("blue"))
+            root.write(">> ")
+            root.set_fg_color(pg.Color("white"))
+            root.set_bg_color(pg.Color("black"))
+            if root.input().lower()=="exit":
+                root.run = False
     
     root.script = program
     root.mainloop()
