@@ -18,8 +18,8 @@ class ContainerGroup:
 
         self.stack = []
     
-    def update(self, terminal):
-        self.containers[self.current_container].update(terminal)
+    def update(self, terminal, events):
+        self.containers[self.current_container].update(terminal, events)
     
     def next_container(self, new_name):
         self.stack.append(self.current_container)
@@ -37,7 +37,7 @@ class Container:
         self.selected_element = None
         self.is_focus = False
     
-    def update(self, terminal):
+    def update(self, terminal, events):
         for e in self.terminal.events:
             if e.type==UIEvent.CHANGE_CONTAINER:
                 self.selected_element = None
@@ -60,7 +60,7 @@ class Container:
                 pg.event.post(pg.Event(UIEvent.ENDUPDATE))
         
         for e in self.elements:
-            e.update(terminal)
+            e.update(terminal, events)
 
 class Element:
     def __init__(self, root, x, y, width, height):
@@ -71,6 +71,8 @@ class Element:
 
         self.root = root
         self.root.elements.append(self)
+
+        self.is_selected = False
     
     def __del__(self):
         self.root.elements.remove(self)
@@ -80,7 +82,7 @@ class Element:
             self.root.selected_element = None
         pg.event.post(pg.Event(UIEvent.UNFOCUS))
     
-    def update(self, terminal):
+    def update(self, terminal, events):
         source_cursor = deepcopy(terminal.cursor)
         for x in range(self.text.shape[0]):
             for y in range(self.text.shape[1]):
