@@ -94,3 +94,78 @@ class Element:
                     if not terminal.cursor.check():
                         terminal.write(self.text[x, y])
         terminal.cursor = source_cursor
+
+class Frame(Element):
+    def __init__(self, root, x, y, width, height, color=[[255,255,255],[0,0,0]],
+            top="\0",
+            left="\0",
+            right="\0",
+            bottom="\0",
+            topleft="\0",
+            topright="\0",
+            bottomleft="\0",
+            bottomright="\0",
+            sides=None):
+        super().__init__(root, x, y, width, height)
+
+        self.top = [top]+color
+        self.left = [left]+color
+        self.right = [right]+color
+        self.bottom = [bottom]+color
+        self.topleft = [topleft]+color
+        self.topright = [topright]+color
+        self.bottomleft = [bottomleft]+color
+        self.bottomright = [bottomright]+color
+
+        self.sides = [self.top,self.left,self.right,self.bottom,self.topleft,self.topright,self.bottomleft,self.bottomright]
+
+        if sides is not None:
+            for s in range(len(sides)):
+                self.sides[s] = sides[s]
+
+    def update(self, terminal, events):
+        orig_text = deepcopy(self.text)
+        orig_fgcolor = deepcopy(self.fgcolor)
+        orig_bgcolor = deepcopy(self.bgcolor)
+
+        self.text[0,0], self.fgcolor[0,0], self.bgcolor[0,0] = self.topleft[0], np.array(self.topleft[1]), np.array(self.topleft[2])
+        self.text[-1,0], self.fgcolor[-1,0], self.bgcolor[-1,0] = self.topright[0], np.array(self.topright[1]), np.array(self.topright[2])
+        self.text[0,-1], self.fgcolor[0,-1], self.bgcolor[0,-1] = self.bottomleft[0], np.array(self.bottomleft[1]), np.array(self.bottomleft[2])
+        self.text[-1,-1], self.fgcolor[-1,-1], self.bgcolor[-1,-1] = self.bottomright[0], np.array(self.bottomright[1]), np.array(self.bottomright[2])
+
+        self.text[1:-1,0], self.fgcolor[1:-1,0], self.bgcolor[1:-1,0] = self.top[0], np.array(self.top[1]), np.array(self.top[2])
+        self.text[1:-1,-1], self.fgcolor[1:-1,-1], self.bgcolor[1:-1,-1] = self.bottom[0], np.array(self.bottom[1]), np.array(self.bottom[2])
+        self.text[0,1:-1], self.fgcolor[0,1:-1], self.bgcolor[0,1:-1] = self.left[0], np.array(self.left[1]), np.array(self.left[2])
+        self.text[-1,1:-1], self.fgcolor[-1,1:-1], self.bgcolor[-1,1:-1] = self.right[0], np.array(self.right[1]), np.array(self.right[2])
+
+        super().update(terminal, events)
+
+        self.text = orig_text
+        self.fgcolor = orig_fgcolor
+        self.bgcolor = orig_bgcolor
+
+class ThinFrame(Frame):
+    def __init__(self, root, x, y, width, height, color=[[255, 255, 255], [0, 0, 0]]):
+        super().__init__(root, x, y, width, height, color=color, 
+            top="─", 
+            left="│", 
+            right="│", 
+            bottom="─", 
+            topleft="┌", 
+            topright="┐", 
+            bottomleft="└", 
+            bottomright="┘"
+        )
+
+class BoldFrame(Frame):
+    def __init__(self, root, x, y, width, height, color=[[255, 255, 255], [0, 0, 0]]):
+        super().__init__(root, x, y, width, height, color=color, 
+            top="═", 
+            left="║", 
+            right="║",
+            bottom="═", 
+            topleft="╔", 
+            topright="╗", 
+            bottomleft="╚", 
+            bottomright="╝"
+        )
