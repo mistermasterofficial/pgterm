@@ -38,7 +38,7 @@ class Container:
         self.is_focus = False
     
     def update(self, terminal, events):
-        for e in self.terminal.events:
+        for e in events:
             if e.type==UIEvent.CHANGE_CONTAINER:
                 self.selected_element = None
                 self.is_focus = False
@@ -48,13 +48,13 @@ class Container:
                 self.is_focus = False
             if e.type==pg.KEYDOWN and e.key==pg.K_TAB and pg.key.get_mods() & (pg.KMOD_LSHIFT|pg.KMOD_RSHIFT) and not self.is_focus and self.selected_element is not None:
                 pg.event.post(pg.Event(UIEvent.UNSELECT, element=self.selected_element))
-                self.selected_element = self.selectable_elements[(self.selectable_elements.index(self.selected_element)-1)%len(self.selected_element)]
+                self.selected_element = self.selectable_elements[(self.selectable_elements.index(self.selected_element)-1)%len(self.selectable_elements)]
                 pg.event.post(pg.Event(UIEvent.SELECT, element=self.selected_element))
-            if e.type==pg.KEYDOWN and e.key==pg.K_TAB and not self.is_focus:
+            if e.type==pg.KEYDOWN and e.key==pg.K_TAB and not pg.key.get_mods() & (pg.KMOD_LSHIFT|pg.KMOD_RSHIFT) and not self.is_focus:
                 pg.event.post(pg.Event(UIEvent.UNSELECT, element=self.selected_element))
                 if self.selected_element is None and len(self.selectable_elements)>0:
                     self.selected_element = self.selectable_elements[-1]
-                self.selected_element = self.selectable_elements[(self.selectable_elements.index(self.selected_element)+1)%len(self.selected_element)]
+                self.selected_element = self.selectable_elements[(self.selectable_elements.index(self.selected_element)+1)%len(self.selectable_elements)]
                 pg.event.post(pg.Event(UIEvent.SELECT, element=self.selected_element))
             if e.type==pg.KEYDOWN and e.key==pg.K_RETURN and not self.is_focus and self.selected_element is None:
                 pg.event.post(pg.Event(UIEvent.ENDUPDATE))
