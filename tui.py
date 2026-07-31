@@ -144,6 +144,46 @@ class Frame(Element):
         self.fgcolor = orig_fgcolor
         self.bgcolor = orig_bgcolor
 
+class TextBox:
+    @staticmethod
+    def write(element, text, coords, size, color=[[255,255,255],[0,0,0]], fill=False):
+        cursor = [coords[0], coords[1]]
+        words = text.split(" ")
+        if fill:
+            element.text[coords[0]:coords[0]+size[0],coords[1]:coords[1]+size[1]] = "\xa0"
+            element.fgcolor[coords[0]:coords[0]+size[0],coords[1]:coords[1]+size[1]] = np.array(color[0])
+            element.bgcolor[coords[0]:coords[0]+size[0],coords[1]:coords[1]+size[1]] = np.array(color[1])
+        for w in range(len(words)):
+            for s in words[w]:
+                element.text[cursor[0], cursor[1]] = s
+                element.fgcolor[cursor[0], cursor[1]] = np.array(color[0])
+                element.bgcolor[cursor[0], cursor[1]] = np.array(color[1])
+
+                cursor[0] += 1
+                if cursor[0]>=coords[0]+size[0]:
+                    cursor[1] += 1
+                    cursor[0] = coords[0]
+
+                if cursor[1]>=coords[1]+size[1]:
+                    return
+
+            if len(words[w])>(coords[0]+size[0])-cursor[0]:
+                cursor[0] = coords[0]
+                cursor[1] += 1
+
+                if cursor[1]>=coords[1]+size[1]:
+                    return
+            
+            elif w<len(words)-1:
+                element.text[cursor[0], cursor[1]] = " "
+                element.fgcolor[cursor[0], cursor[1]] = np.array(color[0])
+                element.bgcolor[cursor[0], cursor[1]] = np.array(color[1])
+
+                cursor[0] += 1
+                if cursor[0]>=coords[0]+size[0]:
+                    cursor[1] += 1
+                    cursor[0] = coords[0]
+
 class ThinFrame(Frame):
     def __init__(self, root, x, y, width, height, color=[[255, 255, 255], [0, 0, 0]]):
         super().__init__(root, x, y, width, height, color=color, 
