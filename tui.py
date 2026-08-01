@@ -71,8 +71,6 @@ class Element:
 
         self.root = root
         self.root.elements.append(self)
-
-        self.is_selected = False
     
     def __del__(self):
         self.root.elements.remove(self)
@@ -123,11 +121,9 @@ class Frame(Element):
             for s in range(len(sides)):
                 self.sides[s] = sides[s]
 
-    def update(self, terminal, events):
-        orig_text = deepcopy(self.text)
-        orig_fgcolor = deepcopy(self.fgcolor)
-        orig_bgcolor = deepcopy(self.bgcolor)
+        self.draw_frame()
 
+    def draw_frame(self):
         self.text[0,0], self.fgcolor[0,0], self.bgcolor[0,0] = self.topleft[0], np.array(self.topleft[1]), np.array(self.topleft[2])
         self.text[-1,0], self.fgcolor[-1,0], self.bgcolor[-1,0] = self.topright[0], np.array(self.topright[1]), np.array(self.topright[2])
         self.text[0,-1], self.fgcolor[0,-1], self.bgcolor[0,-1] = self.bottomleft[0], np.array(self.bottomleft[1]), np.array(self.bottomleft[2])
@@ -137,12 +133,6 @@ class Frame(Element):
         self.text[1:-1,-1], self.fgcolor[1:-1,-1], self.bgcolor[1:-1,-1] = self.bottom[0], np.array(self.bottom[1]), np.array(self.bottom[2])
         self.text[0,1:-1], self.fgcolor[0,1:-1], self.bgcolor[0,1:-1] = self.left[0], np.array(self.left[1]), np.array(self.left[2])
         self.text[-1,1:-1], self.fgcolor[-1,1:-1], self.bgcolor[-1,1:-1] = self.right[0], np.array(self.right[1]), np.array(self.right[2])
-
-        super().update(terminal, events)
-
-        self.text = orig_text
-        self.fgcolor = orig_fgcolor
-        self.bgcolor = orig_bgcolor
 
 class TextBox:
     @staticmethod
@@ -154,6 +144,13 @@ class TextBox:
             element.fgcolor[coords[0]:coords[0]+size[0],coords[1]:coords[1]+size[1]] = np.array(color[0])
             element.bgcolor[coords[0]:coords[0]+size[0],coords[1]:coords[1]+size[1]] = np.array(color[1])
         for w in range(len(words)):
+            if len(words[w])>(coords[0]+size[0])-cursor[0]:
+                cursor[0] = coords[0]
+                cursor[1] += 1
+
+                if cursor[1]>=coords[1]+size[1]:
+                    return
+            
             for s in words[w]:
                 element.text[cursor[0], cursor[1]] = s
                 element.fgcolor[cursor[0], cursor[1]] = np.array(color[0])
@@ -166,15 +163,8 @@ class TextBox:
 
                 if cursor[1]>=coords[1]+size[1]:
                     return
-
-            if len(words[w])>(coords[0]+size[0])-cursor[0]:
-                cursor[0] = coords[0]
-                cursor[1] += 1
-
-                if cursor[1]>=coords[1]+size[1]:
-                    return
             
-            elif w<len(words)-1:
+            if w<len(words)-1:
                 element.text[cursor[0], cursor[1]] = " "
                 element.fgcolor[cursor[0], cursor[1]] = np.array(color[0])
                 element.bgcolor[cursor[0], cursor[1]] = np.array(color[1])
