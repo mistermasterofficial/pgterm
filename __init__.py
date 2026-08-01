@@ -316,9 +316,11 @@ class TerminalWindow(Terminal):
 
     def freeze(self):
         self.is_freeze = True
+        self.cursor.visible = False
 
     def unfreeze(self):
         self.is_freeze = False
+        self.cursor.visible = True
 
     def draw(self):
         if not self.is_freeze:
