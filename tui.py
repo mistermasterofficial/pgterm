@@ -171,6 +171,9 @@ class TextBox:
                     cursor[1] += 1
                     cursor[0] = coords[0]
 
+                if cursor[1]>=coords[1]+size[1]:
+                    return
+
 class ThinFrame(Frame):
     def __init__(self, color=[[255, 255, 255], [0, 0, 0]]):
         super().__init__(color=color, 
