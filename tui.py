@@ -93,8 +93,8 @@ class Element:
                         terminal.write(self.text[x, y])
         terminal.cursor = source_cursor
 
-class Frame(Element):
-    def __init__(self, root, x, y, width, height, color=[[255,255,255],[0,0,0]],
+class Frame:
+    def __init__(self, color=[[255,255,255],[0,0,0]],
             top="\0",
             left="\0",
             right="\0",
@@ -104,7 +104,6 @@ class Frame(Element):
             bottomleft="\0",
             bottomright="\0",
             sides=None):
-        super().__init__(root, x, y, width, height)
 
         self.top = [top]+color
         self.left = [left]+color
@@ -121,18 +120,16 @@ class Frame(Element):
             for s in range(len(sides)):
                 self.sides[s] = sides[s]
 
-        self.draw_frame()
+    def draw(self, element):
+        element.text[0,0], element.fgcolor[0,0], element.bgcolor[0,0] = self.topleft[0], np.array(self.topleft[1]), np.array(self.topleft[2])
+        element.text[-1,0], element.fgcolor[-1,0], element.bgcolor[-1,0] = self.topright[0], np.array(self.topright[1]), np.array(self.topright[2])
+        element.text[0,-1], element.fgcolor[0,-1], element.bgcolor[0,-1] = self.bottomleft[0], np.array(self.bottomleft[1]), np.array(self.bottomleft[2])
+        element.text[-1,-1], element.fgcolor[-1,-1], element.bgcolor[-1,-1] = self.bottomright[0], np.array(self.bottomright[1]), np.array(self.bottomright[2])
 
-    def draw_frame(self):
-        self.text[0,0], self.fgcolor[0,0], self.bgcolor[0,0] = self.topleft[0], np.array(self.topleft[1]), np.array(self.topleft[2])
-        self.text[-1,0], self.fgcolor[-1,0], self.bgcolor[-1,0] = self.topright[0], np.array(self.topright[1]), np.array(self.topright[2])
-        self.text[0,-1], self.fgcolor[0,-1], self.bgcolor[0,-1] = self.bottomleft[0], np.array(self.bottomleft[1]), np.array(self.bottomleft[2])
-        self.text[-1,-1], self.fgcolor[-1,-1], self.bgcolor[-1,-1] = self.bottomright[0], np.array(self.bottomright[1]), np.array(self.bottomright[2])
-
-        self.text[1:-1,0], self.fgcolor[1:-1,0], self.bgcolor[1:-1,0] = self.top[0], np.array(self.top[1]), np.array(self.top[2])
-        self.text[1:-1,-1], self.fgcolor[1:-1,-1], self.bgcolor[1:-1,-1] = self.bottom[0], np.array(self.bottom[1]), np.array(self.bottom[2])
-        self.text[0,1:-1], self.fgcolor[0,1:-1], self.bgcolor[0,1:-1] = self.left[0], np.array(self.left[1]), np.array(self.left[2])
-        self.text[-1,1:-1], self.fgcolor[-1,1:-1], self.bgcolor[-1,1:-1] = self.right[0], np.array(self.right[1]), np.array(self.right[2])
+        element.text[1:-1,0], element.fgcolor[1:-1,0], element.bgcolor[1:-1,0] = self.top[0], np.array(self.top[1]), np.array(self.top[2])
+        element.text[1:-1,-1], element.fgcolor[1:-1,-1], element.bgcolor[1:-1,-1] = self.bottom[0], np.array(self.bottom[1]), np.array(self.bottom[2])
+        element.text[0,1:-1], element.fgcolor[0,1:-1], element.bgcolor[0,1:-1] = self.left[0], np.array(self.left[1]), np.array(self.left[2])
+        element.text[-1,1:-1], element.fgcolor[-1,1:-1], element.bgcolor[-1,1:-1] = self.right[0], np.array(self.right[1]), np.array(self.right[2])
 
 class TextBox:
     @staticmethod
@@ -175,8 +172,8 @@ class TextBox:
                     cursor[0] = coords[0]
 
 class ThinFrame(Frame):
-    def __init__(self, root, x, y, width, height, color=[[255, 255, 255], [0, 0, 0]]):
-        super().__init__(root, x, y, width, height, color=color, 
+    def __init__(self, color=[[255, 255, 255], [0, 0, 0]]):
+        super().__init__(color=color, 
             top="─", 
             left="│", 
             right="│", 
@@ -188,8 +185,8 @@ class ThinFrame(Frame):
         )
 
 class BoldFrame(Frame):
-    def __init__(self, root, x, y, width, height, color=[[255, 255, 255], [0, 0, 0]]):
-        super().__init__(root, x, y, width, height, color=color, 
+    def __init__(self, color=[[255, 255, 255], [0, 0, 0]]):
+        super().__init__(color=color, 
             top="═", 
             left="║", 
             right="║",
