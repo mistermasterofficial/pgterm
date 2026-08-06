@@ -1,6 +1,7 @@
 from copy import deepcopy
 import numpy as np
 import pygame as pg
+from timer import Timer
 
 class UIEvent:
     CHANGE_CONTAINER = pg.event.custom_type()
@@ -199,3 +200,80 @@ class BoldFrame(Frame):
             bottomleft="╚", 
             bottomright="╝"
         )
+
+class Text(Element):
+    def __init__(self, root, x, y, width, height, text):
+        super().__init__(root, x, y, width, height)
+
+        self.saved_text = text
+        self.visible_text = ""
+        self.is_update = False
+        self.update_symbol_timer = Timer(0.001)
+
+        TextBox.write(self, "", (1,1), (width-2, height-2), fill=True)
+        BoldFrame().draw(self)
+
+    def update(self, terminal, events):
+        for e in events:
+            if e.type==UIEvent.STARTUPDATE:
+                self.visible_text = ""
+                self.is_update = True
+                self.update_symbol_timer.start()
+            if e.type==UIEvent.ENDUPDATE:
+                self.visible_text = deepcopy(self.saved_text)
+                self.is_update = False
+                self.update_symbol_timer.stop()
+
+        if self.is_update and self.update_symbol_timer()==1:
+            if len(self.visible_text)<len(self.saved_text):
+                self.visible_text += self.saved_text[len(self.visible_text)]
+            else:
+                self.is_update = False
+            self.update_symbol_timer.start()
+
+        TextBox.write(self, self.visible_text, (1,1), (self.text.shape[0]-2, self.text.shape[1]-2), fill=True)
+
+        super().update(terminal, events)
+
+class Button(Element):
+    def __init__(self, root, x, y, text, action=None, default_color=[[255,255,255],[0,0,0]], hover_color=[[255,255,255],[0,0,255]], pressed_color=[[0,0,0], [255,255,255]]):
+        super().__init__(root, x, y, len(text)+2, 3)
+
+        TextBox.write(self, text, (1,1), (len(text),1), fill=True)
+        ThinFrame(color=default_color).draw(self)
+
+        self.default_color = default_color
+        self.hover_color = hover_color
+        self.pressed_color = pressed_color
+
+        self.action = action
+        self.is_selected = False
+        self.is_pressed = False
+
+        self.root.selectable_elements.append(self)
+
+    def update(self, terminal, events):
+        for e in events:
+            if e.type == UIEvent.SELECT and e.element is self:
+                self.is_selected = True
+            if e.type == UIEvent.UNSELECT and e.element is self:
+                self.is_selected = False
+                self.is_pressed = False
+
+            if self.is_selected:
+                if e.type == pg.KEYDOWN and e.key == pg.K_RETURN:
+                    self.is_pressed = True
+                if e.type == pg.KEYDOWN and e.key == pg.K_ESCAPE and self.is_pressed:
+                    self.is_pressed = False
+                if e.type == pg.KEYUP and e.key == pg.K_RETURN and self.is_pressed:
+                    self.is_pressed = False
+                    if self.action is not None: self.action()
+
+        if self.is_pressed:
+            self.fgcolor[:,:], self.bgcolor[:,:] = np.array(self.pressed_color[0]), np.array(self.pressed_color[1])
+        elif self.is_selected:
+            self.fgcolor[:,:], self.bgcolor[:,:] = np.array(self.hover_color[0]), np.array(self.hover_color[1])
+        else:
+            self.fgcolor[:,:], self.bgcolor[:,:] = np.array(self.default_color[0]), np.array(self.default_color[1])
+
+        super().update(terminal, events)
