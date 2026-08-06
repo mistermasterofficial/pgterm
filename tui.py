@@ -1,7 +1,7 @@
 from copy import deepcopy
 import numpy as np
 import pygame as pg
-from timer import Timer
+from .timer import Timer
 
 class UIEvent:
     CHANGE_CONTAINER = pg.event.custom_type()
