@@ -226,6 +226,44 @@ class Terminal:
         self.cursor.x -= int(args[0])
         self.cursor_scroll()
 
+    def ansi_esc_j(self, args):
+        if len(args)==1:
+            if args[0]=="" or args[0]=="0":
+                self.ansi_esc_k(args)
+
+                self.text[:,self.cursor.y+1:] = "\0"
+                self.fgcolor[:,self.cursor.y+1:] = self.cursor.fgcolor
+                self.bgcolor[:,self.cursor.y+1:] = self.cursor.bgcolor
+            
+            elif args[0]=="1":
+                self.ansi_esc_k(args)
+
+                self.text[:,:self.cursor.y] = "\0"
+                self.fgcolor[:,:self.cursor.y] = self.cursor.fgcolor
+                self.bgcolor[:,:self.cursor.y] = self.cursor.bgcolor
+
+            elif args[0]=="2":
+                self.text[:,:] = "\0"
+                self.fgcolor[:,:] = self.cursor.fgcolor
+                self.bgcolor[:,:] = self.cursor.bgcolor
+
+    def ansi_esc_k(self, args):
+        if len(args)==1:
+            if args[0]=="" or args[0]=="0":
+                self.text[self.cursor.x:,self.cursor.y] = "\0"
+                self.fgcolor[self.cursor.x:,self.cursor.y] = self.cursor.fgcolor
+                self.bgcolor[self.cursor.x:,self.cursor.y] = self.cursor.bgcolor
+
+            elif args[0]=="1":
+                self.text[:self.cursor.x,self.cursor.y] = "\0"
+                self.fgcolor[:self.cursor.x,self.cursor.y] = self.cursor.fgcolor
+                self.bgcolor[:self.cursor.x,self.cursor.y] = self.cursor.bgcolor
+
+            elif args[0]=="2":
+                self.text[:,self.cursor.y] = "\0"
+                self.fgcolor[:,self.cursor.y] = self.cursor.fgcolor
+                self.bgcolor[:,self.cursor.y] = self.cursor.bgcolor
+
     def ansi_esc_m(self, args):
         for a in args:
             colors = [
