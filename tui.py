@@ -32,17 +32,25 @@ class ContainerGroup:
         pg.event.post(pg.Event(UIEvent.CHANGE_CONTAINER))
 
 class Container:
-    def __init__(self):
+    def __init__(self, keep_screen=False, keep_select=False):
         self.elements = []
         self.selectable_elements = []
         self.selected_element = None
         self.is_focus = False
+
+        self.keep_screen = keep_screen
+        self.keep_select = keep_select
     
     def update(self, terminal, events):
         for e in events:
             if e.type==UIEvent.CHANGE_CONTAINER:
-                self.selected_element = None
-                self.is_focus = False
+                if not self.keep_screen:
+                    terminal.write("\x1b[2j")
+                if not self.keep_select:
+                    pg.event.post(pg.Event(UIEvent.UNSELECT, element=self.selected_element))
+                    pg.event.post(pg.Event(UIEvent.UNFOCUS))
+                    self.selected_element = None
+                    self.is_focus = False
             if e.type==UIEvent.FOCUS:
                 self.is_focus = True
             if e.type==UIEvent.UNFOCUS:
@@ -55,7 +63,8 @@ class Container:
                 pg.event.post(pg.Event(UIEvent.UNSELECT, element=self.selected_element))
                 if self.selected_element is None and len(self.selectable_elements)>0:
                     self.selected_element = self.selectable_elements[-1]
-                self.selected_element = self.selectable_elements[(self.selectable_elements.index(self.selected_element)+1)%len(self.selectable_elements)]
+                if len(self.selectable_elements)>0:
+                    self.selected_element = self.selectable_elements[(self.selectable_elements.index(self.selected_element)+1)%len(self.selectable_elements)]
                 pg.event.post(pg.Event(UIEvent.SELECT, element=self.selected_element))
             if e.type==pg.KEYDOWN and e.key==pg.K_RETURN and not self.is_focus and self.selected_element is None:
                 pg.event.post(pg.Event(UIEvent.ENDUPDATE))

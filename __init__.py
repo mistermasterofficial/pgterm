@@ -86,11 +86,15 @@ class Terminal:
         self.bgcolor = np.full((width, height, 3), 0)
 
         self.cursor = TerminalCursor(width,height)
+        self.ansi_esc_s(None)
         self.is_scroll = True
 
         self.events = []
 
         self.set_font(bitmap_font)
+
+    def exit(self):
+        self.run = False
     
     def set_font(self, bitmap_font):
         self.bitmap_font = bitmap_font
@@ -203,12 +207,9 @@ class Terminal:
             self.cursor.x = 0
             self.cursor.y = 0
         elif len(args)==2:
-            self.ansi_esc_f(args)
-
-    def ansi_esc_f(self, args):
-        self.cursor.x = int(args[0])
-        self.cursor.y = int(args[1])
-        self.cursor_scroll()
+            self.cursor.x = int(args[0])
+            self.cursor.y = int(args[1])
+            self.cursor_scroll()
 
     def ansi_esc_a(self, args):
         self.cursor.y -= int(args[0])
@@ -264,6 +265,26 @@ class Terminal:
                 self.fgcolor[:,self.cursor.y] = self.cursor.fgcolor
                 self.bgcolor[:,self.cursor.y] = self.cursor.bgcolor
 
+    def ansi_esc_e(self, args):
+        self.cursor.x = 0
+        self.cursor.y += int(args[0])
+        self.cursor_scroll()
+
+    def ansi_esc_f(self, args):
+        self.cursor.x = 0
+        self.cursor.y -= int(args[0])
+        self.cursor_scroll()
+
+    def ansi_esc_g(self, args):
+        self.cursor.x = int(args[0])
+        self.cursor_scroll()
+
+    def ansi_esc_s(self, args):
+        self.sco = deepcopy(self.cursor.x), deepcopy(self.cursor.y)
+
+    def ansi_esc_u(self, args):
+        self.cursor.x, self.cursor.y = deepcopy(self.sco)
+
     def ansi_esc_m(self, args):
         for a in args:
             colors = [
@@ -275,7 +296,7 @@ class Terminal:
                 "darkmagenta",
                 "darkcyan",
                 "gray",
-                "",
+                "black", #8 is not useful
                 "default"
             ]
             
@@ -294,7 +315,7 @@ class Terminal:
                     "magenta",
                     "cyan",
                     "white",
-                    "",
+                    "black", #8 is not useful
                     "default"
                 ]
 
@@ -308,6 +329,21 @@ class Terminal:
 
             if hasattr(self, func):
                 getattr(self, func)(pg.Color(colors[int(a[-1])]))
+
+    def hide_cursor(self):
+        self.cursor.visible = False
+    
+    def show_cursor(self):
+        self.cursor.visible = True
+
+    def toggle_cursor(self):
+        self.cursor.visible = not self.cursor.visible
+
+    def clear(self):
+        self.write("\x1b[H\x1b[2J")
+
+    def reset(self):
+        self.write("\x1b[39;49m")
 
 class CharImage:
     @staticmethod
@@ -326,8 +362,8 @@ class CharImage:
         return src
 
     @staticmethod
-    def get_ansi_art_image(filename, scaleY=2, indent=0, position=None):
-        with open(filename,"r") as f:
+    def get_ansi_art_image(filename, scaleY=2, indent=0, position=None, encoding="utf-8"):
+        with open(filename,"r",encoding=encoding) as f:
             data = f.readlines()
         result = ""
         if position is not None:
@@ -354,11 +390,11 @@ class TerminalWindow(Terminal):
 
     def freeze(self, cursor=False):
         self.is_freeze = True
-        self.cursor.visible = cursor
+        if cursor: self.toggle_cursor()
 
-    def unfreeze(self, cursor=True):
+    def unfreeze(self, cursor=False):
         self.is_freeze = False
-        self.cursor.visible = cursor
+        if cursor: self.toggle_cursor()
 
     def draw(self):
         if not self.is_freeze:
@@ -378,7 +414,10 @@ class TerminalWindow(Terminal):
     def update(self):
         self.clock.tick(self.fps)
         self.events = pg.event.get()
-        self.events_queue.put(self.events)
+        try:
+            self.events_queue.put(self.events, False)
+        except:
+            pass
         for e in self.events:
             if e.type == pg.QUIT:
                 self.run = False
@@ -396,11 +435,51 @@ class TerminalWindow(Terminal):
 
             for e in events:
                 if e.type==pg.KEYDOWN and (key is None or e.key==key):
-                    return
+                    return events
+
+    def radiobuttons_input(self, buttons, default_prefix="\x1b[39;49m  ", select_prefix="\x1b[30;107m> "):
+        result = 0
+        old_result = -1
+        is_visible = deepcopy(self.cursor.visible)
+        old_cursor = deepcopy(self.cursor.fgcolor), deepcopy(self.cursor.bgcolor)
+        self.hide_cursor()
+        clock = pg.Clock()
+
+        esc_start_x = "\x1b["+str(self.cursor.x)+"c"
+        esc_return = "\x1b["+";".join((str(self.cursor.x),str(self.cursor.y)))+"H"
+
+        while True:
+            clock.tick(self.fps)
+
+            events = self.get_events()
+
+            if result!=old_result:
+                self.freeze()
+                self.write(esc_return)
+                for b in range(len(buttons)):
+                    prefix = select_prefix if b==result else default_prefix
+                    self.write(prefix, buttons[b])
+                    if b<len(buttons)-1:
+                        self.writeln()
+                        self.write(esc_start_x)
+                self.unfreeze()
+                old_result = deepcopy(result)
+
+            for e in events:
+                if e.type==pg.KEYDOWN:
+                    if e.key==pg.K_RETURN:
+                        self.cursor.visible = is_visible
+                        self.cursor.fgcolor, self.cursor.bgcolor = old_cursor
+                        self.writeln()
+                        return result
+                    if e.key==pg.K_TAB and not pg.key.get_mods() & (pg.KMOD_LSHIFT|pg.KMOD_RSHIFT):
+                        result=(result+1)%len(buttons)
+                    if e.key==pg.K_TAB and pg.key.get_mods() & (pg.KMOD_LSHIFT|pg.KMOD_RSHIFT):
+                        result=(result-1)%len(buttons)
     
     def input(self, placeholder="", size=0, password_char=""):
         result = placeholder
-        old_result = deepcopy(result)
+        old_result = ""
         if size>0:
             result = result[:min(len(result),size)]
         cursor = len(result)
@@ -447,8 +526,7 @@ class TerminalWindow(Terminal):
                             cursor+=1
 
             if password_char!="\0" and (result!=old_result or cursor!=old_cursor):
-                self.freeze()
-                self.cursor.visible = False
+                self.freeze(True)
                 self.cursor.x -= old_cursor
                 self.cursor.check()
                 for i in range(max_size):
@@ -466,6 +544,7 @@ class TerminalWindow(Terminal):
                 old_cursor = deepcopy(cursor)
                 old_result = deepcopy(result)
                 self.unfreeze()
+                self.show_cursor()
 
     def script(self):
         pass
@@ -482,21 +561,21 @@ if __name__=="__main__":
 
     def program():
         root.writeln("Hello, World!\nПривет, мир!")
-        root.write("\x1b[31m▓▒░\v\r")
-        root.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
-        root.write("0123456789ABC\tDEF\r")
+        root.write("\x1b[31m▓▒░\v\r\t")
+        # root.writeln("←↑→↓↔↕↨▀▄█▌▐■□▪▫▬▲►▼◄○●◘◙◦")
+        # root.write("0123456789ABC\tDEF\r")
     
-        root.write(CharImage.get_bitmap_image(0,80,4,4))
+        # root.write(CharImage.get_bitmap_image(0,80,4,4))
     
-        root.write("\v\x1b[h")
+        # root.write("\v\x1b[h")
 
-        for i in range(8):
-            root.write(f"\x1b[3{i}m█")
-        for i in range(8):
-            root.write(f"\x1b[9{i}m█")
-        root.waitkey()
-    
-        root.writeln(CharImage.get_ansi_art_image("ansi_picture.txt", position=(1,2)))
+        # for i in range(8):
+        #     root.write(f"\x1b[3{i}m█")
+        # for i in range(8):
+        #     root.write(f"\x1b[9{i}m█")
+        # root.waitkey()
+
+        root.radiobuttons_input(["start","credits","Lorem ipsum dolor adsfjkhajsdhfgsadfkhsdgfkahjsdgfskdhfjgaksdhjfgskdfhj","exit"])
 
         while True:
             root.set_fg_color(pg.Color("white"))
@@ -504,7 +583,7 @@ if __name__=="__main__":
             root.write(">> ")
             root.set_fg_color(pg.Color("white"))
             root.set_bg_color(pg.Color("black"))
-            if root.input().lower()=="exit":
+            if root.input(placeholder="hello",password_char="*").lower()=="exit":
                 root.run = False
     
     root.script = program
