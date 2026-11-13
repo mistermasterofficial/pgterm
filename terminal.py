@@ -317,11 +317,11 @@ class Terminal:
 
             if a[-1]=="8":
                 continue
-            elif a[:-1] in "39" and a[-1]=="9":
+            if a=="39" or a=="99":
                 self.set_fg_color(pg.Color("white"))
                 continue
-            elif a[:-1] in "410" and a[-1]=="9":
-                self.set_fg_color(pg.Color("black"))
+            if a=="49" or a=="109":
+                self.set_bg_color(pg.Color("black"))
                 continue
 
             if a[:-1]=="9" or a[:-1]=="10":
@@ -330,10 +330,8 @@ class Terminal:
             func = "set_"
             if a[:-1]=="3" or a[:-1]=="9":
                 func += "fg_color"
-                colors[-1] = "white"
             if a[:-1]=="4" or a[:-1]=="10":
                 func += "bg_color"
-                colors[-1] = "black"
 
             if hasattr(self, func):
                 getattr(self, func)(pg.Color(colors[int(a[-1])]))

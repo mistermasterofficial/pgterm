@@ -1,4 +1,4 @@
-from terminal import *
+from .terminal import *
 
 if __name__=="__main__":
     root = TerminalWindow(50,40,default_font,display_flags=pg.SCALED|pg.FULLSCREEN)
